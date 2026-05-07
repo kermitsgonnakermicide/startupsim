@@ -1,0 +1,53 @@
+{
+  "summary": "Iteration 9 — alerts feature + news false-positive cleanup. Backend pytest 16/16 PASSED (alerts CRUD, scope, validation, crossing semantics, news matchedOnly + stop-alias filter, regressions for /watchlist /portfolio /news /marketbot /leaderboard, WS-dispatch user scoping). Frontend smoke: bell renders + empty state + 'Enable browser notifications' CTA OK; News tab renders 60 jump-pill buttons with correct `data-testid=news-jump-{SYM}-{i}`; Market tab has `watch-toggle-{SYM}` testids on all 90 rows. CRITICAL: clicking ANY news jump button raises 'ReferenceError: onJumpToSymbol is not defined' from NewsTab.jsx — prop is referenced but never destructured in the component signature. This breaks the entire news→market jump + spotlight feature.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "NewsTab.jsx", "issue": "Component signature is `const NewsTab = () => {` — does not destructure `onJumpToSymbol` prop. The onClick handler at line 217 (`onJumpToSymbol?.(sym)`) throws ReferenceError because the variable is never declared in scope. Spotlight + tab-jump never fires; React shows 'Uncaught runtime errors' overlay. Fix: change signature to `const NewsTab = ({ onJumpToSymbol }) => {`.", "selector": "[data-testid^='news-jump-']", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "News→Market jump+spotlight", "issue": "Blocked by the ReferenceError above — could not verify .row-spotlight animation, search-clear, or tab switch. After fix, please re-run frontend smoke.", "affected_selectors": ["[data-testid^='news-jump-']", ".row-spotlight"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_alerts_news.py",
+    "/app/test_reports/pytest/alerts_news.xml"
+  ],
+  "verified_features": [
+    "POST /api/alerts — accepts valid above/below; returns {alert:{id,active:true,triggered:false,...}} ✓",
+    "POST /api/alerts — rejects unknown symbol (400), invalid direction (400), zero/negative target (400), target>100x current (400) ✓",
+    "GET /api/alerts — auth-scoped: userA cannot see userB's alerts; userB likewise ✓",
+    "DELETE /api/alerts/{id} — owner-scoped: userA's DELETE on userB's alert returns {ok:false}, alert remains ✓",
+    "Crossing semantics — above:T fires only when prev<T && new>=T; below:T fires only when prev>T && new<=T; already-satisfied alerts do NOT fire retroactively (verified by direct AlertsService.check() unit tests on 4 cases) ✓",
+    "After trigger — alert is removed from the in-memory _by_symbol bucket; would be persisted with active:false/triggered:true (write to Mongo on engine loop) ✓",
+    "GET /api/news/headlines?matchedOnly=true — every returned headline has matchedSymbols.length > 0 (no leaks); spot-checked 50 headlines, no false positives for stop words physics/practical/mobile/scaler/locus ✓",
+    "WS scoping — alerts_service._dispatch routes ALERT msg only to the owning user's queue; userB's queue stays empty even after userA's alert triggers ✓",
+    "Regressions — /api/watchlist /api/portfolio /api/news/headlines /api/news/for/{symbol} /api/marketbot/chat /api/leaderboard all return 200 ✓",
+    "Frontend — bell icon renders in navbar; dropdown shows '0 active · 0 triggered this session' + 'No active alerts. Click \"Set Alert!\" on a stock to add one.' + red 'Enable browser notifications' button ✓",
+    "Frontend — News tab renders 60 jump-pill buttons with `data-testid=news-jump-{SYMBOL}-{i}` ✓",
+    "Frontend — Market tab still exposes `watch-toggle-{SYM}` for all 90 rows ✓"
+  ],
+  "action_items": [
+    "FIX (CRITICAL): /app/frontend/src/components/NewsTab.jsx line 44 — change `const NewsTab = () => {` to `const NewsTab = ({ onJumpToSymbol }) => {`. Without this fix the news→market jump throws on every click and the spotlight animation never plays. After fix, re-run iteration 9 frontend smoke."
+  ],
+  "critical_code_review_comments": [
+    "NewsTab.jsx is missing prop destructuring — relies on optional-chain `onJumpToSymbol?.(...)` but optional chaining still throws ReferenceError when the identifier is *undeclared* (not just nullish). Add the prop to the arrow function signature.",
+    "AlertsService.check() runs synchronously on the engine's reprice tick — the in-process unit test confirms correctness, but consider adding a regression pytest that actually drives a price tick through the engine when market is OPEN (currently weekend → market closed → cannot exercise the live engine path).",
+    "/api/alerts POST validates targetPrice within 100x of current price, but the error string ('targetPrice is unreasonably far from current price') doesn't tell the user the bound. Consider including the allowed range in the error.",
+    "alerts_service.delete() returns ok=false (HTTP 200) when the alert id doesn't exist for the requester. Per spec a 404 might be more correct, but current behaviour avoids leaking ownership info — acceptable as-is."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_alerts_news.py (NEW — 16 tests)"
+  ],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "~70% (bell + testids verified; news jump flow blocked by ReferenceError)"},
+  "test_credentials": "admin / SCALEdaddySALLU67 ; second test user `alerttest_<rand>` created via signup + admin-approve during the test run.",
+  "seed_data_creation": "Each test class self-cleans alerts it creates (delete after assertions). One transient pending->approved user per pytest run remains in DB after teardown — username pattern `alerttest_<6-hex>`. Recommend periodic cleanup if tests are run repeatedly.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent fixes NewsTab.jsx prop destructuring, re-run the frontend smoke: login as admin → click News tab → click first `[data-testid^='news-jump-']` → confirm (a) Market tab becomes active, (b) URL/state for sector filter is reset, (c) the row for that symbol gets a `.row-spotlight` class for ~3s, (d) no React 'Uncaught runtime errors' overlay. Backend tests at /app/backend/tests/test_alerts_news.py can be re-run with `pytest /app/backend/tests/test_alerts_news.py -v`. Market is CLOSED on weekends so live trade-pressure cannot trigger crossings via /api/trade — use the in-process AlertsService test (already in test_alerts_news.py::TestAlertsCrossing) for deterministic verification.",
+  "rca of the issue": "RCA — NewsTab is a React functional component but its arrow signature `() => {` omits the destructured `{ onJumpToSymbol }` prop. Inside the body, the click handler references `onJumpToSymbol?.(sym)`. Optional chaining (`?.`) suppresses TypeError on null/undefined object access, but it does NOT suppress ReferenceError when the identifier itself is undeclared in scope. Result: every click of the matched-symbol pill throws and the React error boundary takes over the page. App.js IS passing the prop correctly (`<NewsTab onJumpToSymbol={jumpToSymbol} />` at line 178) — the consumer-side bug is purely the missing destructure. Fix is one line."
+}

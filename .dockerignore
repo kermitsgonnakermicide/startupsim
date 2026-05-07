@@ -1,0 +1,9 @@
+.git
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/node_modules
+**/build
+**/dist
+**/.DS_Store
+test_reports

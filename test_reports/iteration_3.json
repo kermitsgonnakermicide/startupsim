@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 3 — change-password endpoint, /api/chart/{symbol} (Yahoo), and Resend email integration. Backend pytest: 38/38 PASSED (added 12 new tests: 6 change-password, 5 chart, 1 email side-effect). Frontend Playwright: ⚙ change-password button visible in navbar (data-testid='change-pw-btn'); modal opens; success path produces 'Password updated' toast; logout + relogin with new password succeeds; password restored to admin123. Chart modal opens via open-chart-<SYMBOL> click on Market tab — 1D view renders 77 rects + 93 SVG lines (candles + wicks), 1Y view renders 249 rects with previousClose ReferenceLine visible; Buy button closes chart and opens TradeModal; Close button dismisses chart. Resend email: admin notification to scalesupportteam2@gmail.com confirmed in backend logs (Email sent to=scalesupportteam2@gmail.com id=...); applicant emails to non-verified test addresses log expected WARNING (Resend test-mode 403 — not a code defect).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/signup → notify_admin_new_application", "issue": "Resend test mode rejects emails to non-verified recipients with 403; expected. Logged as WARNING. To deliver to applicants in production, verify a domain at resend.com/domains and update SENDER_EMAIL."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ChangePasswordModal", "issue": "Client-side validation errors (newPassword <6 chars, confirm mismatch, same as current) are not surfaced as visible inline error text — query for [class*='text-red'] / [class*='error'] returned empty after invalid submits, while toast appears only on success. Backend 400/401 responses on submit also do not produce a visible toast/error in the modal. Users see no feedback on bad input.", "selector": "[data-testid=\"change-pw-modal\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Chart Modal & Market sparkline", "issues": ["Recharts ResponsiveContainer emits 'width(-1) height(-1)' warnings on initial render (10+ occurrences). Persisted from iter 2 — set explicit minWidth/minHeight on the inner ResponsiveContainer to silence."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "ChangePasswordModal: add visible inline error rendering for client-side validation (length<6, confirm mismatch, same as current) and for backend 400/401 responses (currently only success toast shown).",
+    "(Optional) Verify a domain at resend.com to deliver applicant approval/reject emails outside Resend test mode.",
+    "(Optional) Silence Recharts width(-1) warnings by giving the chart's ResponsiveContainer an explicit min size."
+  ],
+  "critical_code_review_comments": [
+    "/api/chart/{symbol}: Yahoo Finance is hit on every request with no caching — heavy users could trigger Yahoo rate limits. Consider a 30–60s in-memory TTL cache keyed by (symbol, range, interval).",
+    "/api/auth/change-password: no rate-limit applied (unlike signup/login/reapply). A malicious actor with a valid token could brute-force currentPassword. Add rate_limit('changepw:<userId>', 10, 60).",
+    "server.py is 827 lines — past the 700-line guideline; split into routers/auth.py, routers/admin.py, routers/trade.py, routers/chart.py.",
+    "emailer.py reads RESEND_API_KEY/SENDER_EMAIL/ADMIN_EMAIL via os.environ.get on every call (good for hot-reload), but module-level constants SENDER_EMAIL/ADMIN_EMAIL/PUBLIC_APP_URL at top are now dead code — remove for clarity.",
+    "chart endpoint: variable name `l` (lowercase L) shadows builtins and triggers ambiguous-naming lint warnings — rename to `lo` or `low`."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (38/38)", "frontend": "100% on requested flows (ChangePassword UI feedback caveat noted as MEDIUM bug)"},
+  "test_credentials": "admin / admin123 (RESTORED at end of testing — verified by test_admin_password_round_trip_stays_admin123 + frontend roundtrip). demo_user / demo123.",
+  "seed_data_creation": "12 ephemeral pending users (uuid prefix) created via /api/auth/signup during test run; approved/rejected/revoked through admin endpoints. No persistent data added.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Frontend ChangePasswordModal data-testids: change-pw-modal (root), cp-current, cp-new, cp-confirm, cp-submit (NOT cpw-*). ChartModal: chart-modal, range-1d|5d|1mo|3mo|6mo|1y, chart-buy, chart-sell, chart-close. Market table: open-chart-<SYMBOL> on each row. ABCAPITAL is the alphabetical first chart-clickable in default sort. Resend test-mode quirk: ONLY emails to scalesupportteam2@gmail.com deliver; all other recipients log WARNING — that's expected, not a bug. To verify email actually fired, grep /var/log/supervisor/backend.err.log for 'emailer - INFO - Email sent to=scalesupportteam2@gmail.com'."
+}

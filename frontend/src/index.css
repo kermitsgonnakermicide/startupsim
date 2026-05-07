@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0a0e1a;
+  --bg-surface: #111827;
+  --bg-elevated: #1a2235;
+  --bg-highlight: #1e293b;
+  --border: #1e293b;
+  --border-subtle: #0f172a;
+  --green: #00d4aa;
+  --green-dim: rgba(0, 212, 170, 0.15);
+  --red: #f03e3e;
+  --red-dim: rgba(240, 62, 62, 0.15);
+  --blue: #a01e20;
+  --blue-dim: rgba(160, 30, 32, 0.18);
+  --blue-hover: #c41e3a;
+  --amber: #f59e0b;
+  --amber-dim: rgba(245, 158, 11, 0.15);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+}
+
+[data-theme="light"] {
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-highlight: #e2e8f0;
+  --border: #cbd5e1;
+  --border-subtle: #e2e8f0;
+  --green: #059669;
+  --green-dim: rgba(5, 150, 105, 0.12);
+  --red: #dc2626;
+  --red-dim: rgba(220, 38, 38, 0.12);
+  --blue: #a01e20;
+  --blue-dim: rgba(160, 30, 32, 0.10);
+  --blue-hover: #c41e3a;
+  --amber: #d97706;
+  --amber-dim: rgba(217, 119, 6, 0.12);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+}
+
+/* shadcn token mapping (dark only) */
+@layer base {
+  :root {
+    --background: 222 47% 7%;
+    --foreground: 214 32% 91%;
+    --card: 221 39% 11%;
+    --card-foreground: 214 32% 91%;
+    --popover: 221 39% 11%;
+    --popover-foreground: 214 32% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 214 32% 91%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 214 32% 91%;
+    --destructive: 0 86% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 359 69% 37%;
+    --radius: 0.5rem;
+  }
+
+  [data-theme="light"] {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 7%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 7%;
+    --primary: 359 69% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 7%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 7%;
+    --destructive: 0 86% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 359 69% 37%;
+  }
+
+  * { @apply border-border; }
+
+  html, body, #root {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    min-height: 100vh;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv02','cv03','cv04','cv11';
+  }
+
+  .mono, .num { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+}
+
+/* scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--bg-highlight); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #2a3550; }
+
+/* flash animations on tick */
+@keyframes flashGreen {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: var(--green-dim); }
+}
+@keyframes flashRed {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: var(--red-dim); }
+}
+.flash-green { animation: flashGreen 1.2s ease-out; }
+.flash-red { animation: flashRed 1.2s ease-out; }
+
+/* spotlight highlight when navigating to a specific stock (e.g. from News tab) */
+@keyframes rowSpotlight {
+  0%   { background-color: transparent; box-shadow: inset 0 0 0 0 var(--blue); }
+  10%  { background-color: var(--blue-dim); box-shadow: inset 0 0 0 2px var(--blue); }
+  100% { background-color: transparent; box-shadow: inset 0 0 0 0 var(--blue); }
+}
+.row-spotlight { animation: rowSpotlight 3s ease-out; }
+
+/* pulse dot */
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(0, 212, 170, 0); }
+}
+.dot-pulse { animation: pulse-dot 1.8s ease-out infinite; }
+
+/* selection */
+::selection { background: var(--blue-dim); color: var(--text-primary); }
+
+/* utility surfaces */
+.surface { background: var(--bg-surface); border: 1px solid var(--border); }
+.surface-elevated { background: var(--bg-elevated); border: 1px solid var(--border); }
+.surface-highlight { background: var(--bg-highlight); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px; font-size: 11px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em;
+}
+
+.grid-bg {
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(160,30,32,0.12), transparent 40%),
+    radial-gradient(circle at 80% 100%, rgba(0,212,170,0.05), transparent 40%);
+}
+
+/* table hover row */
+.tr-hover:hover { background: var(--bg-elevated); }
+.tr-held { box-shadow: inset 2px 0 0 0 var(--blue); background: rgba(160,30,32,0.05); }
+
+.btn-buy { background: var(--blue); color: white; }
+.btn-buy:hover { background: #2563eb; }
+.btn-sell { background: var(--red); color: white; }
+.btn-sell:hover { background: #dc2626; }
+.btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+.up { color: var(--green); }
+.down { color: var(--red); }
+
+/* disclaimer fixed footer */
+.disclaimer {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg-elevated); color: var(--text-muted);
+  font-size: 11px; padding: 6px 16px; text-align: center;
+  border-top: 1px solid var(--border);
+  z-index: 30;
+}

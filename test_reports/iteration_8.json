@@ -1,0 +1,66 @@
+{
+  "summary": "StartupMarket pivot — full backend + frontend validation. Backend pytest 11/13 PASSED, 2 SKIPPED (market is CLOSED on 03-May-2026 Sunday — BUY pressure branch cannot be exercised live; market-closed branch instead exercised and verified). Frontend e2e: login → branding → 15-col Market grid → demand pills → news ticker → MarketBot chat with required disclaimer suffix → theme toggle persistence → ChartModal demand-card → leaderboard all VERIFIED. Chat reply via Claude Sonnet 4.5 returned a coherent Razorpay answer ending with 'MarketBot estimate — for educational use only'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/marketbot/chat", "issue": "Single transient run on first execution — passed on retry. Acceptable per spec (LLM glitch tolerated)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MarketTab/recharts sparkline", "issue": "Console: 'The width(-1) and height(-1) of chart should be greater than 0' — sparkline parent dimensions not set on first render. Cosmetic; chart eventually renders.", "selector": "tbody tr td:nth-last-child(2)", "priority": "LOW"},
+      {"component": "WebSocket /api/ws", "issue": "wss connection warning logged in console (token-bearing WS); not blocking — REST poll fallback is wired and prices/demand still update.", "selector": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Leaderboard empty-state", "issue": "Spec says 'No traders yet — be the first to make a trade!' empty state should show when no real users have traded, but backend /api/leaderboard returns ALL non-admin portfolios (incl. 99 prior test signups never having traded), each with ₹1,00,000 / +0.00%. Result: empty-state never fires; the leaderboard is filled with no-op users. Either filter portfolios that never traded, or document current behavior.", "affected_selectors": ["[data-testid='leaderboard-empty']"]}
+    ],
+    "design_issues": [
+      {"screen": "Disclaimer banner", "issues": ["Banner explicitly mentions 'SEBI', 'NSE', 'BSE' — by design (disclaiming affiliation). Confirm wording reads 'Not affiliated with SEBI/NSE/BSE' (not promoting). Verified text contains 'Educational Simulator Only' and 'SimRupees' ✓."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_startupmarket_pivot.py",
+    "/app/test_reports/pytest/startupmarket_pivot.xml"
+  ],
+  "verified_features": [
+    "/api/stocks → 90 startup symbols, sector field present, 0 NSE legacy symbols ✓",
+    "/api/demand → 90 symbols, public, all in [-1,1] band ✓",
+    "/api/prices → keyed by startup symbol; price ~0.054 for RZRPAY (PRICE_FACTOR ok); demandPressure & sector present ✓",
+    "/api/trade → 400 'Trading is disabled. The market is currently closed.' when market closed ✓",
+    "/api/chart/RZRPAY?range=1d → 78 synthetic candles, isSynthetic=true, valuation=54000, demandPressure, narrative present ✓",
+    "/api/chart deterministic per (symbol,range) for interior candles ✓",
+    "/api/marketbot/chat → 401 unauth; 400 empty; 200 with reply ending in '(MarketBot estimate — for educational use only)' ✓",
+    "/api/marketbot/refresh-news → 403 for non-admin; 200 admin with applied:N, items:{...} ✓",
+    "/api/leaderboard → no row.fake=true (FAKE_USERS empty) ✓",
+    "Frontend AuthPage: 'StartupMarket' brand + 🚀 + educational disclaimer paragraph ✓",
+    "Navbar: StartupMarket brand, 'AI VALUATION SIM' subtitle, 'SIMRUPEES ₹S' pill, 'MARKET CLOSED' status, theme-toggle button (🌙/☀️) ✓",
+    "Market tab: 15 columns [☆, Symbol, Name, Sector, Demand, LTP, Open, High, Low, Chg, Chg %, AI Insight, Est. Updated, Trend, Buy/Sell] ✓",
+    "Demand column shows NEUTRAL pills for all symbols (engine fresh, pressure=0) ✓",
+    "News ticker [data-testid='news-ticker'] with 'MARKETBOT LIVE' label, scrolling content ✓",
+    "MarketBot floating widget: 🤖 button, click opens panel, ask 'What is Razorpay?' → reply rendered with required disclaimer suffix ✓",
+    "Disclaimer banner contains 'Educational Simulator Only' + 'SimRupees' ✓",
+    "ChartModal opens for any symbol; chart-demand-card rendered (verified via testid presence + screenshot) ✓",
+    "Theme toggle: data-theme dark→light AND localStorage 'startupmarket-theme' updates AND persists across reload ✓",
+    "buy-CASHFREE / sell-CASHFREE buttons present (live trade fail expected — market closed)"
+  ],
+  "action_items": [
+    "(Product decision) Decide if /api/leaderboard should exclude users with zero trades so the 'leaderboard-empty' state can fire, or document current 'all portfolios shown' behavior as intentional.",
+    "(Cosmetic) Set explicit width/height on the recharts ResponsiveContainer in MarketTab sparkline cell to silence the width(-1)/height(-1) console warning on first render.",
+    "(Optional) Investigate the wss /api/ws connection warning in console — REST poll fallback works so demand still updates every 30s, but a clean WS handshake would remove the log noise."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1123 lines — past 700-line guideline; consider splitting into routers/{auth,admin,trade,leaderboard,chart,marketbot}.py.",
+    "FAKE_USERS list is now empty (good) but the leaderboard endpoint still iterates all portfolios + N+1 holdings reads. With 99 grandfathered test users this works; for prod scale, switch to a $lookup aggregation.",
+    "/api/chart synthetic returns deterministic interior candles but pins last candle to live last_real → consumers comparing whole arrays across reloads will see drift on the last point only. Acceptable; document if external consumers depend on it.",
+    "MarketBot disclaimer suffix is enforced server-side (good) — recommend a unit test asserting the marketbot.chat_with_history wrapper always appends it even on retry/error fallback paths."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_startupmarket_pivot.py (NEW — 13 tests covering pivot)"
+  ],
+  "success_rate": {"backend": "100% (11/11 executed, 2 skipped due to market closed; chat test passes on retry)", "frontend": "~95% (all advertised testids found; one product-decision item on leaderboard empty-state)"},
+  "test_credentials": "admin / SCALEdaddySALLU67  &  demo_user / demo123 (validated; demo_user token issued).",
+  "seed_data_creation": "None. Tests do not mutate persistent state when market is CLOSED. Theme localStorage flipped during run (cosmetic only).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Frontend storage keys used by the React app: 'scale_token', 'scale_user', 'startupmarket-theme' (theme), plus market-tab prefs 'scale_market_sort'/'scale_market_sector'. Login MUST go through UI form (data-testid input-username, input-password, submit-auth) — direct localStorage injection with key 'token' will not work. Market-tab data-testids: row-{SYM}, watch-toggle-{SYM}, open-chart-{SYM}, demand-{SYM}, ai-insight-{SYM}, buy-{SYM}, sell-{SYM}. Default render shows ~25 rows (filter/search to reach RZRPAY etc.). MarketBot widget: marketbot-toggle (FAB), marketbot-input, marketbot-send. ChartModal: chart-demand-card. Tabs: tab-market|watchlist|portfolio|history|leaderboard. Market is CLOSED on weekends — to test BUY-pressure live, run on weekday 09:15-15:30 IST or monkey-patch fetcher.cache.market_status."
+}

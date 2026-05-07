@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 2 (approval gating + admin tab + crimson theme): 26/26 backend pytest passed (after 60s rate-limit cooldown). Frontend verified: SCALE logo, three tabs (LOG IN/APPLY/REAPPLY), Apply form with email+reason fields, green submitted banner, amber pending notice on blocked login, admin login shows CREATOR badge + Admin tab, sub-tabs (pending/approved/rejected) functional, demo_user has neither badge nor admin tab. Crimson #a01e20 confirmed on submit/Buy buttons; Sell remains red (#f03e3e). Approve button click executed on a pending user.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "/api/auth/signup", "issue": "Rate limiter (10/min/IP) is aggressive in tests; flaky 429s under burst signup. Tests now retry-on-429."}
+  ]},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin tab — pending list", "issues": ["Many sparkline/Recharts ResponsiveContainer warnings: 'width(-1) and height(-1) of chart should be greater than 0' — minor; trend column renders but containers transiently size to -1 before layout. Consider giving the inline sparkline a fixed minWidth/minHeight to silence warnings."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Optional: silence Recharts ResponsiveContainer width/height warnings on Market trend column by setting minWidth/minHeight on the container.",
+    "Optional: for shared-IP environments, key signup rate limiter on X-Forwarded-For first hop instead of request.client.host."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now ~720 lines — split into routers (auth, admin, trade, leaderboard, market) for maintainability.",
+    "_seed_admin uses ADMIN_PASSWORD plaintext from env; idempotent re-seed does not refresh password hash if env changes.",
+    "_migrate_grandfather sets approvedAt = createdAt (could pre-date admin); fine but worth a comment.",
+    "/admin/applications has no pagination — fine until pending count grows."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "100% (26/26)", "frontend": "100% on requested flows"},
+  "test_credentials": "admin/admin123 (creator), demo_user/demo123 (grandfathered approved)",
+  "seed_data_creation": "Tests create ephemeral pending users via /api/auth/signup with TEST-style uuid prefix; admin approve/reject/revoke flow exercised against fresh users each run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Signup rate limit is 10/60s/IP; if you re-run backend tests back-to-back, sleep ~60s between runs (or expect retries). Frontend data-testids: tab-login/tab-signup/tab-reapply, input-username/password/confirm/email/reason, submit-auth, auth-info, auth-pending, tab-admin, admin-subtab-{pending|approved|rejected}, admin-approve-<username>, admin-reject-<username>, admin-revoke-<username>. Crimson var --blue=#a01e20 = rgb(160,30,32)."
+}
