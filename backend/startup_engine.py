@@ -452,6 +452,7 @@ class StartupEngine:
         self._tasks.append(asyncio.create_task(self._algo_walk_loop()))
         self._tasks.append(asyncio.create_task(self._decay_loop()))
         self._tasks.append(asyncio.create_task(self._news_cycle_loop()))
+        self._tasks.append(asyncio.create_task(self._full_sweep_loop()))
         logger.info("Startup engine started (%d symbols)", len(STOCKS))
 
     async def stop(self):

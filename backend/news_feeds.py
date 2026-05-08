@@ -88,7 +88,7 @@ def _alias_set(stock: dict[str, Any]) -> set[str]:
     name = stock["name"]
     name_lc = name.lower()
     aliases.add(name_lc)
-    if len(symbol) >= 5:
+    if len(symbol) >= 3:
         aliases.add(symbol)
     for suffix in (" Corporation", " Pvt", " Private", " Ltd", " Limited", " Inc",
                    " Technologies", " Therapeutics", " Networks", " Payments",
@@ -105,10 +105,19 @@ def _alias_set(stock: dict[str, Any]) -> set[str]:
     first_word = name.split()[0].lower()
     if len(first_word) >= 5 and first_word not in STOP_ALIASES and len(name.split()) >= 2:
         aliases.add(first_word)
-    return {a for a in aliases if len(a) >= 4 and a not in STOP_ALIASES}
+    return {a for a in aliases if len(a) >= 3 and a not in STOP_ALIASES}
 
 
 ALIAS_INDEX: dict[str, set[str]] = {s["symbol"]: _alias_set(s) for s in STOCKS}
+
+
+def _compile_patterns(aliases: set[str]) -> list[re.Pattern]:
+    return [re.compile(r"\b" + re.escape(a) + r"\b", re.IGNORECASE) for a in aliases]
+
+
+COMPILED_PATTERNS: dict[str, list[re.Pattern]] = {
+    sym: _compile_patterns(aliases) for sym, aliases in ALIAS_INDEX.items()
+}
 
 
 def _google_news_url(company_name: str) -> str:
@@ -299,13 +308,10 @@ class NewsFeedAggregator:
         self._last_refresh = datetime.now(timezone.utc)
 
     # ------------- query API -------------
-    def _compile(self, aliases: set[str]) -> list[re.Pattern]:
-        return [re.compile(r"\b" + re.escape(a) + r"\b", re.IGNORECASE) for a in aliases]
 
     def find_for(self, symbol: str, max_age_hours: int = 72, limit: int = 5) -> list[dict[str, Any]]:
-        aliases = ALIAS_INDEX.get(symbol, set())
         cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
-        patterns = self._compile(aliases)
+        patterns = COMPILED_PATTERNS.get(symbol, [])
         hits = []
         for art in reversed(self.articles):
             if art["published_at"] < cutoff:
@@ -329,7 +335,6 @@ class NewsFeedAggregator:
         When matched_only=True, drops everything that doesn't mention a listed company.
         When min_per_sector>0, guarantees up to `min_per_sector` freshest items from each
         sector (when available) at the top of the response before filling with chronology."""
-        compiled = {sym: self._compile(aliases) for sym, aliases in ALIAS_INDEX.items()}
         from data.stocks import STOCK_MAP as _SM
         # Build full-sorted list first (by published_at desc)
         all_sorted = sorted(self.articles, key=lambda a: a["published_at"], reverse=True)
@@ -344,7 +349,7 @@ class NewsFeedAggregator:
                 sec = _SM.get(hint, {}).get("sector")
                 if sec:
                     matched_sectors.add(sec)
-            for sym, patterns in compiled.items():
+            for sym, patterns in COMPILED_PATTERNS.items():
                 if sym in matched_symbols:
                     continue
                 if any(p.search(haystack) for p in patterns):

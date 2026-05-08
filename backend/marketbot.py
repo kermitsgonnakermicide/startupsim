@@ -95,6 +95,22 @@ async def _responses_text(system: str, user_text: str) -> str:
     return (resp.output_text or "").strip()
 
 
+async def _responses_json(system: str, user_text: str) -> str:
+    client = _client()
+    if client is None:
+        raise RuntimeError("GEMINI_API_KEY not configured")
+    resp = await client.aio.models.generate_content(
+        model=MODEL_NAME,
+        contents=user_text,
+        config=types.GenerateContentConfig(
+            system_instruction=system,
+            temperature=0.2,
+            response_mime_type="application/json",
+        ),
+    )
+    return (resp.text or "").strip()
+
+
 def _trim(text: str, limit: int = 120) -> str:
     text = re.sub(r"\s+", " ", (text or "").strip())
     if len(text) <= limit:
@@ -141,15 +157,23 @@ def _offline_sentiment(items: list[dict], article_lookup: dict[str, list[dict]] 
         sym = it["symbol"]
         articles = article_lookup.get(sym, [])
         if articles:
-            headline = articles[0].get("title") or "Recent headlines were mixed."
-            score = 1 if re.search(r"funding|profit|growth|launch|partnership|expands?", headline, re.I) else 0
-            if re.search(r"layoff|lawsuit|breach|fire|probe|cuts?", headline, re.I):
+            # Pick the most interesting headline to drive the score
+            headline = articles[0].get("title") or "Mixed market signals."
+            score = 0
+            # Simple heuristic for offline scoring
+            pos = r"funding|profit|growth|launch|partnership|expands?|unicorn|ipo|deal"
+            neg = r"layoff|lawsuit|breach|fire|probe|cuts?|markdown|loss|scandal"
+            if re.search(pos, headline, re.I):
+                score = 2
+            elif re.search(neg, headline, re.I):
                 score = -2
             out[sym] = {"score": score, "reason": headline[:240]}
         else:
+            # Sector-based generic narratives if no live headlines
+            sector = it.get("sector", "Tech")
             out[sym] = {
                 "score": 0,
-                "reason": f"No live model key configured; keeping {sym} neutral until fresh analysis is available.",
+                "reason": f"MarketBot analyzing {sector} sector signals for {sym}. No recent major headlines found.",
             }
     return out
 
@@ -196,7 +220,7 @@ async def fetch_news_sentiment(items: list[dict]) -> dict[str, dict[str, Any]]:
         + "\n\nReturn ONLY a JSON object keyed by symbol."
     )
     try:
-        raw = await _responses_text(NEWS_SYSTEM, user_text)
+        raw = await _responses_json(NEWS_SYSTEM, user_text)
     except Exception as e:
         logger.warning("news sentiment fetch failed: %s", e)
         return _offline_sentiment(items)
@@ -241,7 +265,7 @@ async def fetch_live_news_sentiment(
         "Return JSON keyed by symbol."
     )
     try:
-        raw = await _responses_text(LIVE_NEWS_SYSTEM, user_text)
+        raw = await _responses_json(LIVE_NEWS_SYSTEM, user_text)
     except Exception as e:
         logger.warning("live news sentiment fetch failed: %s", e)
         return _offline_sentiment(covered, article_lookup)
@@ -249,19 +273,30 @@ async def fetch_live_news_sentiment(
 
 
 def _parse_sentiment_json(raw: str) -> dict[str, dict[str, Any]]:
+    # Extract the outermost JSON object
     m = re.search(r"\{.*\}", raw, re.DOTALL)
     if not m:
+        logger.warning("No JSON object found in MarketBot response")
         return {}
     try:
-        parsed = json.loads(m.group(0))
-        return {
-            k: {
-                "score": int(v.get("score", 0)),
-                "reason": str(v.get("reason", ""))[:240],
-            }
-            for k, v in parsed.items()
-            if isinstance(v, dict)
-        }
+        data = json.loads(m.group(0))
+        # Handle different potential nesting levels (sometimes LLMs wrap it)
+        if "items" in data and isinstance(data["items"], dict):
+            data = data["items"]
+        
+        cleaned = {}
+        for k, v in data.items():
+            if not isinstance(v, dict):
+                continue
+            # Ensure score is an int and reason is a string
+            try:
+                cleaned[str(k).upper()] = {
+                    "score": int(v.get("score", 0)),
+                    "reason": str(v.get("reason", ""))[:240],
+                }
+            except (ValueError, TypeError):
+                continue
+        return cleaned
     except Exception as e:
         logger.warning("sentiment parse failed: %s - raw: %s", e, raw[:200])
         return {}

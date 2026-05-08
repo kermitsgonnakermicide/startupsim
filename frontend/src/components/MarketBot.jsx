@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
+import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * useMarketBot pulls server-side demand pressure and news reasons every 30s
@@ -197,7 +197,7 @@ export const MarketBotChat = () => {
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>MarketBot</div>
                 <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>
-                  OpenAI or offline mode · educational use only
+                  Gemini or offline mode · educational use only
                 </div>
               </div>
             </div>

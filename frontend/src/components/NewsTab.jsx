@@ -43,17 +43,18 @@ const relTime = (iso) => {
 
 const NewsTab = ({ onJumpToSymbol }) => {
   const [data, setData] = useState(null);
+  const [matchedOnly, setMatchedOnly] = useState(true);
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get("/news/headlines?limit=500&matchedOnly=true&minPerSector=8");
+      const { data } = await api.get(`/news/headlines?limit=500&matchedOnly=${matchedOnly}&minPerSector=8`);
       setData(data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [matchedOnly]);
 
   useEffect(() => {
     load();
@@ -87,13 +88,45 @@ const NewsTab = ({ onJumpToSymbol }) => {
             {" "}updated {data?.status?.lastRefresh ? relTime(data.status.lastRefresh) : "…"}
           </div>
         </div>
-        <button
-          data-testid="news-refresh"
-          onClick={load}
-          className="btn-ghost px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5"
-        >
-          <span style={{ fontSize: 14 }}>↻</span> Refresh
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setMatchedOnly(!matchedOnly)}>
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: 36,
+                height: 20,
+                borderRadius: 20,
+                background: matchedOnly ? "var(--blue)" : "var(--bg-highlight)",
+                position: "relative",
+                transition: "background 0.2s",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  position: "absolute",
+                  left: matchedOnly ? 19 : 3,
+                  transition: "left 0.2s",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                }}
+              />
+            </div>
+            <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              Matched Only
+            </span>
+          </div>
+          <button
+            data-testid="news-refresh"
+            onClick={load}
+            className="btn-ghost px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5"
+          >
+            <span style={{ fontSize: 14 }}>↻</span> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Sector filter chips */}
@@ -141,11 +174,22 @@ const NewsTab = ({ onJumpToSymbol }) => {
         <div className="surface rounded-xl p-12 text-center" data-testid="news-empty">
           <div style={{ fontSize: 36, marginBottom: 10, color: "var(--text-muted)" }}>📰</div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>
-            No {filter === "All" ? "" : filter + " "}headlines right now
+            No {filter === "All" ? "" : filter + " "}headlines found
           </div>
-          <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 4 }}>
-            The scraper refreshes every 5 minutes from 12 national sources. Check back shortly.
+          <div style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 4, maxWidth: 300, margin: "4px auto 0" }}>
+            {matchedOnly 
+              ? "Try turning off 'Matched Only' to see general market news from verified Indian publications."
+              : "The scraper refreshes every 5 minutes. Check back shortly."}
           </div>
+          {matchedOnly && (
+            <button 
+              onClick={() => setMatchedOnly(false)}
+              className="btn-ghost mt-4 px-4 py-2 rounded-md text-xs font-semibold"
+              style={{ color: "var(--blue)", border: "1px solid var(--blue)" }}
+            >
+              Show All News
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2" data-testid="news-list">
