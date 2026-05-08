@@ -12,7 +12,11 @@ api.interceptors.request.use((config) => {
 });
 
 export const wsUrl = (token) => {
-  const u = new URL(BACKEND_URL);
+  let base = BACKEND_URL;
+  if (!base || base.startsWith("/")) {
+    base = window.location.origin;
+  }
+  const u = new URL(base);
   u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
   u.pathname = "/api/ws";
   u.searchParams.set("token", token);
