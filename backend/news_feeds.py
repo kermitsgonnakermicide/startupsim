@@ -59,16 +59,11 @@ GOOGLE_NEWS_RSS = (
 
 # ----- alias index (for filtering matched articles client-side) -----
 STOP_ALIASES = {
-    "care", "tech", "loco", "foods", "tata", "with", "your", "country",
+    "care", "tech", "with", "your", "country",
     "raise", "ruby", "sun", "bounce", "freo", "yap", "jupiter", "heads",
     "bombay", "mumbai", "delhi", "bangalore", "chennai", "hyderabad",
     "kolkata", "pune", "ahmedabad", "noida", "gurgaon", "gurugram",
     "indian", "india", "bharat",
-    # generic first-words that were causing false positives in general RSS
-    "practical", "practically", "physics", "mobile", "scaler", "locus",
-    "slice", "setu", "pixel", "pixxel", "sattva", "signzy", "sunstone",
-    "country", "leverage", "heads", "space", "rooter", "licious", "darwin",
-    "facilio", "exotel", "zenoti", "niramai", "tricog", "unicards",
 }
 
 
@@ -291,11 +286,11 @@ class NewsFeedAggregator:
                 })
                 self._seen_links.add(link)
                 added += 1
-            if len(self._seen_links) > 15000:
-                self._seen_links = set(list(self._seen_links)[-10000:])
+            if added > 0:
+                logger.info("Fetched %d new articles from %s", added, source_hint or url[:60])
             return added
         except Exception as e:
-            logger.debug("feed fail (%s): %s", source_hint or url[:60], e)
+            logger.warning("feed fail (%s): %s", source_hint or url[:60], e)
             return 0
 
     def _prune_and_mark(self):

@@ -47,10 +47,17 @@ const NewsTab = ({ onJumpToSymbol }) => {
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState(null);
+
   const load = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       const { data } = await api.get(`/news/headlines?limit=500&matchedOnly=${matchedOnly}&minPerSector=8`);
       setData(data);
+    } catch (err) {
+      console.error("News load failed:", err);
+      setError("Failed to load headlines. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -168,9 +175,17 @@ const NewsTab = ({ onJumpToSymbol }) => {
       </div>
 
       {/* Article list */}
+      {error && (
+        <div className="surface rounded-xl p-6 text-center text-red-400 border border-red-900/30">
+          <div style={{ fontSize: 24, marginBottom: 8 }}>⚠️</div>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>{error}</div>
+          <button onClick={load} className="btn-ghost mt-3 text-xs">Try Again</button>
+        </div>
+      )}
+
       {loading && !data ? (
         <div className="p-12 text-center" style={{ color: "var(--text-muted)" }}>Loading headlines…</div>
-      ) : filtered.length === 0 ? (
+      ) : !error && filtered.length === 0 ? (
         <div className="surface rounded-xl p-12 text-center" data-testid="news-empty">
           <div style={{ fontSize: 36, marginBottom: 10, color: "var(--text-muted)" }}>📰</div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>
