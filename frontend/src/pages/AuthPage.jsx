@@ -99,11 +99,14 @@ const AuthPage = () => {
       }
     } catch (e) {
       const status = e?.response?.status;
-      const detail = e?.response?.data?.detail || "Something went wrong. Try again.";
-      if (mode === "login" && status === 403) {
-        setPendingNotice(detail);
+      const detail = e?.response?.data?.detail;
+      
+      if (!e.response) {
+        setErr("Network error: Cannot reach the server. Check your connection or the backend status.");
+      } else if (mode === "login" && status === 403) {
+        setPendingNotice(detail || "Your account is not active.");
       } else {
-        setErr(detail);
+        setErr(detail || "Something went wrong. Try again.");
       }
     } finally {
       setLoading(false);

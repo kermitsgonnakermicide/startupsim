@@ -90,12 +90,23 @@ async def signup(body: SignupReq, request: Request):
 async def login(body: LoginReq, request: Request):
     rate_limit(f"login:{request.client.host}", max_calls=10, window_sec=60)
     lc = body.username.strip().lower()
+    logger.info("Login attempt for username: %s", lc)
+    
     user = await users_col.find_one({"username_lc": lc})
-    if not user or not verify_password(body.password, user["passwordHash"]):
+    if not user:
+        logger.warning("Login failed: User '%s' not found", lc)
         raise HTTPException(401, "Invalid username or password")
+        
+    if not verify_password(body.password, user["passwordHash"]):
+        logger.warning("Login failed: Incorrect password for user '%s'", lc)
+        raise HTTPException(401, "Invalid username or password")
+        
     ok, reason = is_user_active(user)
     if not ok:
+        logger.warning("Login failed: User '%s' is inactive. Reason: %s", lc, reason)
         raise HTTPException(status_code=403, detail=reason)
+        
+    logger.info("Login successful for user: %s (isAdmin=%s)", user["username"], bool(user.get("isAdmin")))
     token = create_token(user["id"], user["username"], bool(user.get("isAdmin", False)))
     return {
         "token": token,

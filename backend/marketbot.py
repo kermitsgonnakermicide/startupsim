@@ -47,6 +47,7 @@ class LlmChat:
             return "MarketBot is currently offline (API key not configured). (MarketBot estimate — for educational use only)"
         
         try:
+            logger.info(f"MarketBot using model: {self.model_name}")
             model = genai.GenerativeModel(
                 model_name=self.model_name,
                 system_instruction=self.system_message

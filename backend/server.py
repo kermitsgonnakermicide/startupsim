@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 
 from alerts_service import alerts_service
@@ -200,6 +200,17 @@ async def ws_endpoint(ws: WebSocket, token: Optional[str] = Query(None)):
 async def root():
     return {"app": "SCALE India Investment", "status": "ok"}
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info("Incoming request: %s %s", request.method, request.url.path)
+    try:
+        response = await call_next(request)
+        logger.info("Response: %s %s -> status %d", request.method, request.url.path, response.status_code)
+        return response
+    except Exception as e:
+        logger.error("Request failed: %s %s -> %s", request.method, request.url.path, e)
+        raise
 
 app.add_middleware(
     CORSMiddleware,
