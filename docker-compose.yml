@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        REACT_APP_BACKEND_URL: http://localhost:8001
+        REACT_APP_BACKEND_URL: ""
     restart: unless-stopped
     depends_on:
       - backend
