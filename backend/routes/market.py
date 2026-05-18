@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from market_timing import session_info
+from market_timing import force_market_open, session_info
 from nse_fetcher import fetcher
 from startup_engine import engine
 from state import STOCKS, ist_now_str
@@ -41,4 +41,6 @@ async def indices():
 @router.get("/market-status")
 async def market_status():
     """Real market open/close — sourced from NSE timing for IST market hours."""
+    if force_market_open():
+        return session_info()
     return fetcher.cache.market_status or session_info()

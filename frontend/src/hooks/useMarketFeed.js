@@ -9,7 +9,8 @@ export const useMarketFeed = (token) => {
   const [marketStatus, setMarketStatus] = useState(null);
   const [indices, setIndices] = useState({});
   const [news, setNews] = useState({});
-  const [connected, setConnected] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [httpConnected, setHttpConnected] = useState(false);
   const tickListeners = useRef(new Set());
   const alertListeners = useRef(new Set());
   const wsRef = useRef(null);
@@ -33,19 +34,34 @@ export const useMarketFeed = (token) => {
       try {
         const { data } = await api.get("/market-status");
         if (!stopped) setMarketStatus(data);
+        if (!stopped) setHttpConnected(true);
       } catch {}
     };
 
+    const refreshPrices = async () => {
+      try {
+        const { data } = await api.get("/prices");
+        if (!stopped) {
+          setPrices(data.prices || {});
+          setHttpConnected(true);
+        }
+      } catch {
+        if (!stopped) setHttpConnected(false);
+      }
+    };
+
     refreshMarketStatus();
+    refreshPrices();
     const statusPoll = setInterval(refreshMarketStatus, 30000);
+    const pricesPoll = setInterval(refreshPrices, 10000);
 
     const connect = () => {
       if (stopped) return;
       const ws = new WebSocket(wsUrl(token));
       wsRef.current = ws;
-      ws.onopen = () => setConnected(true);
+      ws.onopen = () => setWsConnected(true);
       ws.onclose = () => {
-        setConnected(false);
+        setWsConnected(false);
         if (!stopped) {
           clearTimeout(reconnectRef.current);
           reconnectRef.current = setTimeout(connect, 3000);
@@ -90,10 +106,11 @@ export const useMarketFeed = (token) => {
     return () => {
       stopped = true;
       clearInterval(statusPoll);
+      clearInterval(pricesPoll);
       clearTimeout(reconnectRef.current);
       try { wsRef.current?.close(); } catch {}
     };
   }, [token]);
 
-  return { prices, marketStatus, indices, news, connected, onTick, onAlert };
+  return { prices, marketStatus, indices, news, connected: wsConnected || httpConnected, onTick, onAlert };
 };

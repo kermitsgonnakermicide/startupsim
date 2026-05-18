@@ -22,6 +22,7 @@ from emailer import (
     fire_and_forget, notify_user_approved, notify_user_rejected, verify_action_token,
 )
 import marketbot
+from market_timing import session_info
 from news_feeds import news_feeds
 from nse_fetcher import fetcher
 from startup_engine import engine
@@ -169,8 +170,7 @@ async def ws_endpoint(ws: WebSocket, token: Optional[str] = Query(None)):
     q_alert = alerts_service.subscribe(user_id) if user_id else None
     try:
         await ws.send_json({"type": "PRICES", "data": engine.all_prices()})
-        if fetcher.cache.market_status:
-            await ws.send_json({"type": "MARKET_STATUS", "data": fetcher.cache.market_status})
+        await ws.send_json({"type": "MARKET_STATUS", "data": fetcher.cache.market_status or session_info()})
 
         async def relay(q):
             while True:

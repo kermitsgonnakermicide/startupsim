@@ -16,7 +16,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from auth_utils import hash_password
 from data.stocks import STOCKS, STOCK_MAP, BASE_VALUATIONS, base_price  # noqa: F401 (re-exported)
-from market_timing import session_info
+from market_timing import force_market_open, session_info
 from nse_fetcher import fetcher
 from startup_engine import engine
 
@@ -47,6 +47,8 @@ alerts_col = db["alerts"]
 
 # --------------------- Helpers ---------------------
 def market_is_open() -> bool:
+    if force_market_open():
+        return True
     ms = fetcher.cache.market_status or session_info()
     return (ms.get("status") or "").upper() == "OPEN"
 
