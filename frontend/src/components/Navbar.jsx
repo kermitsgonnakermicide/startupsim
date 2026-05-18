@@ -20,23 +20,19 @@ const StatusDot = ({ color, pulse }) => (
 );
 
 const LogoMark = () => (
-  <div
-    aria-hidden="true"
+  <img
+    src="/logo.jpg"
+    alt="SCALE"
     style={{
       width: 32,
       height: 32,
       borderRadius: 6,
       border: "1px solid var(--border)",
-      background: "linear-gradient(135deg, rgba(160,30,32,0.22), rgba(37,99,235,0.22))",
-      display: "grid",
-      placeItems: "center",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+      objectFit: "cover",
+      display: "block",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
     }}
-  >
-    <span className="mono" style={{ color: "var(--blue)", fontSize: 13, fontWeight: 700, letterSpacing: "-0.06em" }}>
-      SC
-    </span>
-  </div>
+  />
 );
 
 const Pill = ({ label, value, tone = "neutral", sub, testid }) => {
@@ -73,9 +69,10 @@ const Navbar = ({ portfolio, marketStatus, tab, setTab, onAlert, onJumpToSymbol 
   const [showCp, setShowCp] = useState(false);
 
   useEffect(() => {
+    setCd(marketStatus?.countdownTo ? countdown(marketStatus.countdownTo) : "");
     const id = setInterval(() => {
       setClock(istClock());
-      if (marketStatus?.countdownTo) setCd(countdown(marketStatus.countdownTo));
+      setCd(marketStatus?.countdownTo ? countdown(marketStatus.countdownTo) : "");
     }, 1000);
     return () => clearInterval(id);
   }, [marketStatus]);
@@ -127,7 +124,7 @@ const Navbar = ({ portfolio, marketStatus, tab, setTab, onAlert, onJumpToSymbol 
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: mc.dot }}>
               {mc.label}
             </span>
-            {cd && mc.label === "MARKET OPEN" && (
+            {cd && mkt.countdownLabel && (
               <span className="mono" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
                 {mkt.countdownLabel} {cd}
               </span>

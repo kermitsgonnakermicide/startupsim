@@ -84,9 +84,9 @@ const MarketTab = ({ prices, botPrices, sparks, stocks, portfolio, marketStatus,
     else if (sort === "change") rows.sort((a, b) => (b.p.changePct || 0) - (a.p.changePct || 0));
     else rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
     return rows;
-  }, [stocks, search, sector, sort, prices]);
+  }, [stocks, search, sector, sort, mergedPrices]);
 
-  const marketClosed = marketStatus?.sessionType === "CLOSED";
+  const marketClosed = !marketStatus || (marketStatus?.status || "").toUpperCase() !== "OPEN";
   const prevTradedLabel = React.useMemo(() => {
     const td = marketStatus?.tradeDate; // e.g. "30-Apr-2026 15:30"
     if (!td) return "Prev close";

@@ -22,7 +22,7 @@ const PortfolioTab = ({ portfolio, prices, stocks, marketStatus, onPortfolioChan
   const [modal, setModal] = useState(null);
   const holdings = portfolio?.holdings || [];
   const pnlTone = (portfolio?.totalPnl ?? 0) >= 0 ? "up" : "down";
-  const marketClosed = marketStatus?.sessionType === "CLOSED" || (marketStatus?.status && marketStatus.status !== "OPEN");
+  const marketClosed = !marketStatus || (marketStatus?.status || "").toUpperCase() !== "OPEN";
 
   const stockFor = (sym) => stocks.find((s) => s.symbol === sym);
 

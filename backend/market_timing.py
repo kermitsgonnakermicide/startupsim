@@ -33,7 +33,7 @@ def session_info(now: datetime | None = None) -> dict:
 
     if is_weekday:
         if pre_open_start <= n < open_start:
-            status = "OPEN"
+            status = "CLOSED"
             session_type = "PRE_OPEN"
             countdown_to = open_start
             countdown_label = "Opens in"
@@ -43,7 +43,7 @@ def session_info(now: datetime | None = None) -> dict:
             countdown_to = close_time
             countdown_label = "Closes in"
         elif close_time <= n < post_close_end:
-            status = "OPEN"
+            status = "CLOSED"
             session_type = "POST_CLOSE"
             countdown_to = post_close_end
             countdown_label = "Fully closes in"
@@ -72,7 +72,7 @@ def session_info(now: datetime | None = None) -> dict:
         countdown_label = "Opens in"
 
     return {
-        "status": status,  # OPEN or CLOSED
+        "status": status,  # OPEN only during regular trading
         "sessionType": session_type,  # PRE_OPEN | REGULAR | POST_CLOSE | CLOSED
         "istTime": n.strftime("%H:%M:%S"),
         "istDate": n.strftime("%d %b %Y"),

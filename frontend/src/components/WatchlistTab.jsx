@@ -45,7 +45,7 @@ const WatchlistTab = ({ prices, botPrices, sparks, stocks, portfolio, marketStat
     return m;
   }, [portfolio]);
 
-  const marketClosed = marketStatus?.sessionType === "CLOSED" || (marketStatus?.status && marketStatus.status !== "OPEN");
+  const marketClosed = !marketStatus || (marketStatus?.status || "").toUpperCase() !== "OPEN";
   const prevTradedLabel = useMemo(() => {
     const td = marketStatus?.tradeDate;
     if (!td) return "Prev close";

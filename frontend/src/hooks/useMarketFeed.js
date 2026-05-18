@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { wsUrl } from "../lib/api";
+import { api, wsUrl } from "../lib/api";
 
 /**
  * Maintains a WebSocket connection, price map, market status and a tick event bus.
@@ -28,6 +28,16 @@ export const useMarketFeed = (token) => {
   useEffect(() => {
     if (!token) return;
     let stopped = false;
+
+    const refreshMarketStatus = async () => {
+      try {
+        const { data } = await api.get("/market-status");
+        if (!stopped) setMarketStatus(data);
+      } catch {}
+    };
+
+    refreshMarketStatus();
+    const statusPoll = setInterval(refreshMarketStatus, 30000);
 
     const connect = () => {
       if (stopped) return;
@@ -79,6 +89,7 @@ export const useMarketFeed = (token) => {
     connect();
     return () => {
       stopped = true;
+      clearInterval(statusPoll);
       clearTimeout(reconnectRef.current);
       try { wsRef.current?.close(); } catch {}
     };
