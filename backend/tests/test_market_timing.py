@@ -32,3 +32,14 @@ def test_post_close_is_not_tradable():
     assert info["status"] == "CLOSED"
     assert info["sessionType"] == "POST_CLOSE"
     assert info["countdownLabel"] == "Fully closes in"
+
+
+def test_force_market_open_override(monkeypatch):
+    monkeypatch.setenv("FORCE_MARKET_OPEN", "true")
+
+    info = session_info(at_ist(15, 45))
+
+    assert info["status"] == "OPEN"
+    assert info["sessionType"] == "REGULAR"
+    assert info["forcedOpen"] is True
+    assert info["countdownLabel"] is None

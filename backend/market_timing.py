@@ -1,5 +1,6 @@
 """IST-aware market session utilities."""
 from datetime import datetime, timedelta
+import os
 import pytz
 
 IST = pytz.timezone("Asia/Kolkata")
@@ -11,6 +12,10 @@ def now_ist() -> datetime:
 
 def _at(dt: datetime, h: int, m: int) -> datetime:
     return dt.replace(hour=h, minute=m, second=0, microsecond=0)
+
+
+def force_market_open() -> bool:
+    return os.environ.get("FORCE_MARKET_OPEN", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def session_info(now: datetime | None = None) -> dict:
@@ -71,6 +76,12 @@ def session_info(now: datetime | None = None) -> dict:
         countdown_to = next_open
         countdown_label = "Opens in"
 
+    if force_market_open():
+        status = "OPEN"
+        session_type = "REGULAR"
+        countdown_to = None
+        countdown_label = None
+
     return {
         "status": status,  # OPEN only during regular trading
         "sessionType": session_type,  # PRE_OPEN | REGULAR | POST_CLOSE | CLOSED
@@ -80,6 +91,7 @@ def session_info(now: datetime | None = None) -> dict:
         "closesAt": close_time.isoformat() if is_weekday else None,
         "countdownTo": countdown_to.isoformat() if countdown_to else None,
         "countdownLabel": countdown_label,
+        "forcedOpen": force_market_open(),
     }
 
 

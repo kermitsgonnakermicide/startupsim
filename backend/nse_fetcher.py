@@ -21,7 +21,7 @@ import httpx
 import pytz
 
 from data.stocks import STOCKS, STOCK_MAP
-from market_timing import session_info
+from market_timing import force_market_open, session_info
 
 logger = logging.getLogger("nse_fetcher")
 
@@ -299,7 +299,7 @@ class NSEFetcher:
         # (e.g., trading holiday like Labour Day, Republic Day, etc.)
         # override the time-based session to CLOSED.
         nse_ms = (status.get("nseMarketStatus") or "").strip().lower()
-        if nse_ms == "close" and status["status"] == "OPEN":
+        if nse_ms == "close" and status["status"] == "OPEN" and not force_market_open():
             status["status"] = "CLOSED"
             status["sessionType"] = "CLOSED"
             status["holidayOverride"] = True
