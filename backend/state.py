@@ -215,13 +215,12 @@ async def seed_admin():
     lc = ADMIN_USERNAME.lower()
     existing = await users_col.find_one({"username_lc": lc})
     if existing:
-        logger.info("Admin user '%s' already exists. Synchronizing isAdmin, status, and password from environment.", ADMIN_USERNAME)
+        logger.info("Admin user '%s' already exists. Ensuring isAdmin is True and status is approved.", ADMIN_USERNAME)
         await users_col.update_one(
             {"username_lc": lc},
             {"$set": {
                 "isAdmin": True, 
                 "status": "approved",
-                "passwordHash": hash_password(ADMIN_PASSWORD)
             }},
         )
         return

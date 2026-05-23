@@ -34,6 +34,10 @@ def _public_url() -> str:
     return os.environ.get("PUBLIC_APP_URL", "")
 
 
+def _public_api_url() -> str:
+    return os.environ.get("PUBLIC_API_URL") or _public_url()
+
+
 def _reply_to() -> dict | None:
     rt = os.environ.get("REPLY_TO_EMAIL", "").strip()
     return {"email": rt} if rt else None
@@ -136,8 +140,9 @@ async def notify_admin_new_application(username: str, email: str, reason: str, u
         logger.warning("ADMIN_EMAIL not set — skipping admin notification")
         return
     public_url = _public_url()
-    approve_url = f"{public_url}/api/admin/action?token={make_action_token(user_id, 'approve')}" if user_id else ""
-    reject_url = f"{public_url}/api/admin/action?token={make_action_token(user_id, 'reject')}" if user_id else ""
+    public_api_url = _public_api_url()
+    approve_url = f"{public_api_url}/api/admin/action?token={make_action_token(user_id, 'approve')}" if user_id else ""
+    reject_url = f"{public_api_url}/api/admin/action?token={make_action_token(user_id, 'reject')}" if user_id else ""
     reason_block = ""
     if reason and reason.strip():
         safe = (reason or "").replace('<', '&lt;').replace('>', '&gt;')

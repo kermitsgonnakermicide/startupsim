@@ -20,7 +20,8 @@ services:
       MONGO_URL: mongodb://mongo:27017
       DB_NAME: scale_india_investment
       CORS_ORIGINS: http://localhost:3000
-      PUBLIC_APP_URL: http://localhost:8001
+      PUBLIC_APP_URL: http://localhost:3000
+      PUBLIC_API_URL: http://localhost:3000
     ports:
       - "8001:8001"
 

@@ -11,7 +11,7 @@ import AdminTab from "@/components/AdminTab";
 import WatchlistTab from "@/components/WatchlistTab";
 import NewsTab from "@/components/NewsTab";
 import IndicesTicker from "@/components/IndicesTicker";
-import MarketBotChat, { useMarketBot } from "@/components/MarketBot";
+import { useMarketBot } from "@/components/MarketBot";
 import { api } from "@/lib/api";
 import { useMarketFeed } from "@/hooks/useMarketFeed";
 import { Toaster } from "@/components/ui/sonner";
@@ -205,7 +205,6 @@ const Shell = () => {
       </div>
 
       <Toaster />
-      <MarketBotChat />
     </div>
   );
 };

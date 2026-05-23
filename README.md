@@ -21,4 +21,5 @@ docker compose up --build
 
 - The backend now works without any hosted third-party scaffolding dependency.
 - If `OPENAI_API_KEY` is empty, MarketBot falls back to offline deterministic responses so the app still boots cleanly.
-- The frontend is served by Nginx and is prebuilt against `http://localhost:8001`.
+- The frontend is served by Nginx on `http://localhost:3000` and proxies `/api` to the backend.
+- Email links use `PUBLIC_APP_URL` for app links and `PUBLIC_API_URL` for one-click admin actions.
