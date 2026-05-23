@@ -212,16 +212,27 @@ async def migrate_starting_cash_5lakh():
 
 async def seed_admin():
     """Seed the admin account on first boot if missing."""
+    import hashlib
     lc = ADMIN_USERNAME.lower()
+    env_hash = hashlib.sha256(ADMIN_PASSWORD.encode("utf-8")).hexdigest()
     existing = await users_col.find_one({"username_lc": lc})
     if existing:
-        logger.info("Admin user '%s' already exists. Ensuring isAdmin is True and status is approved.", ADMIN_USERNAME)
+        stored_env_hash = existing.get("seededPasswordSha256")
+        update_fields = {
+            "isAdmin": True,
+            "status": "approved",
+        }
+        # If the environment password has changed (or was never recorded/seeded),
+        # update the admin's database password to match the new environment setting.
+        if stored_env_hash != env_hash:
+            logger.info("Admin password in environment has changed or is new. Updating database password hash.")
+            update_fields["passwordHash"] = hash_password(ADMIN_PASSWORD)
+            update_fields["seededPasswordSha256"] = env_hash
+
+        logger.info("Admin user '%s' already exists. Synchronizing administrative status.", ADMIN_USERNAME)
         await users_col.update_one(
             {"username_lc": lc},
-            {"$set": {
-                "isAdmin": True, 
-                "status": "approved",
-            }},
+            {"$set": update_fields},
         )
         return
     user_id = str(uuid.uuid4())
@@ -231,6 +242,7 @@ async def seed_admin():
         "username": ADMIN_USERNAME,
         "username_lc": lc,
         "passwordHash": hash_password(ADMIN_PASSWORD),
+        "seededPasswordSha256": env_hash,
         "email": "admin@scale.local",
         "reason": "Creator account",
         "status": "approved",
