@@ -1,5 +1,5 @@
 """StartupMarket pivot — backend tests for /stocks, /demand, /prices, /trade,
-/chart synthetic, /marketbot/chat, /marketbot/refresh-news, /leaderboard (no fakes)."""
+/chart synthetic, /marketbot/refresh-news, /leaderboard (no fakes)."""
 import os
 import time
 import pytest
@@ -35,15 +35,16 @@ def market_open():
 
 
 # ---------- /api/stocks ----------
-def test_stocks_returns_90_startup_symbols():
+def test_stocks_returns_startup_symbols_without_physics_wallah():
     r = requests.get(f"{BASE_URL}/api/stocks", timeout=10)
     assert r.status_code == 200
     stocks = r.json()["stocks"]
-    assert len(stocks) == 90, f"expected 90 startup symbols, got {len(stocks)}"
+    assert len(stocks) == 89, f"expected 89 startup symbols, got {len(stocks)}"
     syms = {s["symbol"] for s in stocks}
     # New universe
-    for must in ("RZRPAY", "BHARATPE", "ZOHO", "CASHFREE", "PWALLAH"):
+    for must in ("RZRPAY", "BHARATPE", "ZOHO", "CASHFREE", "SCALER"):
         assert must in syms, f"missing startup symbol {must}"
+    assert "PWALLAH" not in syms
     # Old NSE universe must NOT be present
     for legacy in ("RELIANCE", "TCS", "INFY", "HDFCBANK"):
         assert legacy not in syms, f"NSE legacy symbol {legacy} still present"
@@ -53,13 +54,13 @@ def test_stocks_returns_90_startup_symbols():
 
 
 # ---------- /api/demand ----------
-def test_demand_no_auth_required_and_covers_all_90():
+def test_demand_no_auth_required_and_covers_all_symbols():
     r = requests.get(f"{BASE_URL}/api/demand", timeout=10)
     assert r.status_code == 200
     body = r.json()
     pressure = body["pressure"]
     assert isinstance(pressure, dict)
-    assert len(pressure) == 90
+    assert len(pressure) == 89
     # all values numeric and within plausible band
     for k, v in pressure.items():
         assert isinstance(v, (int, float))
@@ -145,38 +146,10 @@ def test_chart_deterministic_per_symbol_range(user_token):
         assert x["c"] == y["c"]
 
 
-# ---------- /api/marketbot/chat ----------
-def test_marketbot_chat_requires_auth():
+# ---------- removed /api/marketbot/chat ----------
+def test_marketbot_chat_endpoint_removed():
     r = requests.post(f"{BASE_URL}/api/marketbot/chat", json={"message": "hi"}, timeout=10)
-    assert r.status_code in (401, 403)
-
-
-def test_marketbot_chat_empty_message_400(user_token):
-    r = requests.post(
-        f"{BASE_URL}/api/marketbot/chat",
-        headers={"Authorization": f"Bearer {user_token}"},
-        json={"message": "   "},
-        timeout=10,
-    )
-    assert r.status_code == 400
-
-
-def test_marketbot_chat_returns_reply_with_disclaimer(user_token):
-    r = requests.post(
-        f"{BASE_URL}/api/marketbot/chat",
-        headers={"Authorization": f"Bearer {user_token}"},
-        json={"message": "What is Razorpay in one sentence?"},
-        timeout=60,
-    )
-    if r.status_code == 503:
-        pytest.skip("MarketBot 503 (LLM glitch) — retest later")
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert "reply" in body and isinstance(body["reply"], str) and len(body["reply"]) > 0
-    assert "sessionId" in body
-    assert "MarketBot estimate — for educational use only" in body["reply"], (
-        f"reply missing required disclaimer suffix: {body['reply'][-200:]}"
-    )
+    assert r.status_code == 404
 
 
 # ---------- /api/marketbot/refresh-news ----------

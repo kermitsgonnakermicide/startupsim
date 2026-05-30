@@ -1,8 +1,4 @@
-"""MarketBot — Gemini wrapper for StartupMarket.
-
-Two responsibilities:
-  1. multi-turn chat (per-session history maintained by emergentintegrations)
-  2. one-shot JSON sentiment batch for news-driven price drift
+"""MarketBot — Gemini wrapper for StartupMarket news sentiment.
 
 This implementation uses Google's Gemini API while maintaining the 
 API surface requested by the user.
@@ -72,17 +68,6 @@ MODEL_PROVIDER = "google"
 MODEL_NAME = "gemini-1.5-flash"
 
 
-CHAT_SYSTEM = (
-    "You are MarketBot, an AI assistant for SCALE India Investment — an educational "
-    "private-startup-valuation simulator for high-school students in India. You explain "
-    "private startup valuations, funding rounds, unit economics, and market "
-    "concepts in simple, friendly language. All prices on this platform are "
-    "AI-estimated simulations, not real market data; prices also reflect "
-    "supply and demand from real student trades on the platform. Always end "
-    "your response with: '(MarketBot estimate — for educational use only)'. "
-    "Keep responses under 120 words."
-)
-
 NEWS_SYSTEM = (
     "You are MarketBot, a private-startup-valuation analyst for an educational "
     "simulator. For each company, give a sentiment score reflecting recent "
@@ -121,29 +106,6 @@ LIVE_NEWS_SYSTEM = (
 )
 
 
-def _offline_chat_reply(user_text: str) -> str:
-    lower = (user_text or "").strip().lower()
-    company_match = re.search(r"(what is|about|explain)\s+([a-z0-9 .&-]+)\??$", lower)
-    if company_match:
-        company = company_match.group(2).strip().title()
-        reply = (
-            f"{company} is treated here as a private Indian startup proxy, so its price reflects "
-            "simulated valuation changes, investor demand, and recent news signals inside the learning market"
-        )
-        return reply + " (MarketBot estimate — for educational use only)"
-    if "price" in lower or "moved" in lower or "move" in lower:
-        reply = (
-            "Prices usually move because the simulator blends startup narrative shifts, news sentiment, "
-            "and buy or sell pressure from student trades"
-        )
-        return reply + " (MarketBot estimate — for educational use only)"
-    reply = (
-        "I can help explain startup valuations, funding rounds, unit economics, and why a company in this "
-        "simulator may be rising or falling"
-    )
-    return reply + " (MarketBot estimate — for educational use only)"
-
-
 def _offline_sentiment(items: list[dict], article_lookup: dict[str, list[dict]] | None = None) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     article_lookup = article_lookup or {}
@@ -167,55 +129,6 @@ def _offline_sentiment(items: list[dict], article_lookup: dict[str, list[dict]] 
                 "reason": f"MarketBot analyzing {sector} sector signals for {sym}. No recent major headlines found.",
             }
     return out
-
-
-async def chat_send(session_id: str, user_text: str) -> str:
-    """Single-turn send."""
-    key = _key()
-    if not key:
-        return _offline_chat_reply(user_text)
-    
-    chat = (
-        LlmChat(api_key=key, session_id=session_id, system_message=CHAT_SYSTEM)
-        .with_model(MODEL_PROVIDER, MODEL_NAME)
-    )
-    msg = UserMessage(text=user_text)
-    try:
-        return await chat.send_message(msg)
-    except Exception:
-        return _offline_chat_reply(user_text)
-
-
-async def chat_with_history(session_id: str, history: list[dict], user_text: str) -> str:
-    """Multi-turn — replay history into the LlmChat instance before sending the new turn."""
-    key = _key()
-    if not key:
-        return await chat_send(session_id, user_text)
-    
-    chat = (
-        LlmChat(api_key=key, session_id=session_id, system_message=CHAT_SYSTEM)
-        .with_model(MODEL_PROVIDER, MODEL_NAME)
-    )
-    # Replay prior turns.
-    if history:
-        preamble_lines = []
-        for h in history[-6:]:  # last 6 turns
-            role = h.get("role", "user")
-            content = (h.get("content") or "").strip()
-            if not content:
-                continue
-            preamble_lines.append(f"{role.upper()}: {content}")
-        if preamble_lines:
-            user_text = (
-                "Recent conversation context:\n"
-                + "\n".join(preamble_lines)
-                + f"\n\nCurrent question:\n{user_text}"
-            )
-    msg = UserMessage(text=user_text)
-    try:
-        return await chat.send_message(msg)
-    except Exception:
-        return _offline_chat_reply(user_text)
 
 
 async def fetch_news_sentiment(items: list[dict]) -> dict[str, dict[str, Any]]:

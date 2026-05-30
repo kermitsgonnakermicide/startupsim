@@ -1,7 +1,7 @@
 # SCALE India Investment - PRD
 
 ## Original Problem Statement
-Build a full-stack Indian paper-trading simulator for 90 unlisted Indian startups ("SCALE India Investment"). Prices are synthetic (5 crore shares / company cap table), react to demand pressure (every student's buy/sell) and live Indian news sentiment scored by MarketBot. Dark-terminal crimson UI, WebSocket live feed, admin application approval + Brevo email, watchlist, sector-filtered News tab, threshold price alerts, leaderboard.
+Build a full-stack Indian paper-trading simulator for 89 unlisted Indian startups ("SCALE India Investment"). Prices are synthetic (5 crore shares / company cap table), react to demand pressure (every student's buy/sell) and live Indian news sentiment scored by MarketBot. Dark-terminal crimson UI, WebSocket live feed, admin application approval + Brevo email, watchlist, sector-filtered News tab, threshold price alerts, leaderboard.
 
 ## Implemented (latest first)
 
@@ -18,10 +18,10 @@ Build a full-stack Indian paper-trading simulator for 90 unlisted Indian startup
 - News tab defaults to `matchedOnly=true`.
 
 ### Iteration 8 (2026-05-01) - Full StartupMarket pivot
-- 90 Indian startups, 5 crore shares cap table, and Rs 5,00,000 starting SimRupees.
+- 89 Indian startups, 5 crore shares cap table, and Rs 5,00,000 starting SimRupees.
 - `startup_engine.py` for in-memory price simulation with demand pressure and algo drift.
-- `marketbot.py` for chat and sentiment scoring, now OpenAI-backed with offline fallback.
-- ThemeContext, MarketBot chat widget, News tab, IndicesTicker, and AI insight columns.
+- `marketbot.py` for sentiment scoring with offline fallback.
+- ThemeContext, News tab, IndicesTicker, and AI insight columns.
 
 ### Earlier (1-7)
 - Legacy NSE app, watchlist, admin bulk ops, trade lock, leaderboard hide-toggle, auth, admin approval, and Brevo email.

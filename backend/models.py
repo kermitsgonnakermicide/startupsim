@@ -54,9 +54,3 @@ class AlertReq(BaseModel):
     targetPrice: float
     direction: str  # 'above' | 'below'
     note: Optional[str] = ""
-
-
-class MarketBotChatReq(BaseModel):
-    message: str
-    sessionId: str | None = None
-    history: list[dict] | None = None  # [{role:"user"|"assistant", content:str}, ...]

@@ -168,6 +168,7 @@ async def ensure_indexes():
         await users_col.create_index("username_lc", unique=True, name="uniq_username_lc")
         await portfolios_col.create_index("userId", unique=True)
         await holdings_col.create_index([("userId", 1), ("symbol", 1)], unique=True)
+        await transactions_col.create_index([("userId", 1), ("timestamp", -1)])
         await watchlists_col.create_index([("userId", 1), ("symbol", 1)], unique=True)
         await alerts_col.create_index([("userId", 1), ("createdAt", -1)])
         await alerts_col.create_index([("symbol", 1), ("active", 1)])
@@ -176,38 +177,43 @@ async def ensure_indexes():
 
 
 async def migrate_to_startupmarket():
-    """One-time pivot: drop NSE-era fake leaderboard users, holdings/transactions/
-    watchlists referencing dead NSE symbols, and reset every real user's portfolio
-    cash. Idempotent — guarded by a marker doc in the migrations collection."""
+    """Record the startup-market pivot without touching live user data.
+
+    Earlier versions deleted holdings, transactions, watchlists, and reset cash
+    when this marker was missing. On a restart against a fresh/missing migration
+    marker, that looked like the app resetting itself. Trade history must never
+    be part of a boot-time cleanup.
+    """
     flag_col = db["migrations"]
     marker = await flag_col.find_one({"_id": "startupmarket_pivot_v1"})
     if marker:
         return
-    fake_count = await portfolios_col.count_documents({"fake": True})
-    await portfolios_col.delete_many({"fake": True})
-    h = (await holdings_col.delete_many({})).deleted_count
-    t = (await transactions_col.delete_many({})).deleted_count
-    w = (await watchlists_col.delete_many({})).deleted_count
-    p = (await portfolios_col.update_many({}, {"$set": {"cash": STARTING_CASH}})).modified_count
-    await flag_col.insert_one({"_id": "startupmarket_pivot_v1", "appliedAt": datetime.now(timezone.utc).isoformat()})
-    logger.info(
-        "Startup pivot migration: dropped %d fake users, %d holdings, %d transactions, %d watchlists; reset cash on %d portfolios",
-        fake_count, h, t, w, p,
+    await flag_col.update_one(
+        {"_id": "startupmarket_pivot_v1"},
+        {"$setOnInsert": {
+            "appliedAt": datetime.now(timezone.utc).isoformat(),
+            "mode": "non_destructive",
+        }},
+        upsert=True,
     )
+    logger.info("Startup pivot migration marker recorded without mutating user data")
 
 
 async def migrate_starting_cash_5lakh():
-    """One-time top-up: raise every user's cash floor to ₹5,00,000."""
+    """Record the starting-cash policy without changing existing portfolios."""
     flag_col = db["migrations"]
     marker = await flag_col.find_one({"_id": "starting_cash_5lakh_v1"})
     if marker:
         return
-    res = await portfolios_col.update_many(
-        {"cash": {"$lt": STARTING_CASH}},
-        {"$set": {"cash": STARTING_CASH}},
+    await flag_col.update_one(
+        {"_id": "starting_cash_5lakh_v1"},
+        {"$setOnInsert": {
+            "appliedAt": datetime.now(timezone.utc).isoformat(),
+            "mode": "non_destructive",
+        }},
+        upsert=True,
     )
-    await flag_col.insert_one({"_id": "starting_cash_5lakh_v1", "appliedAt": datetime.now(timezone.utc).isoformat()})
-    logger.info("Starting-cash uplift migration: bumped %d portfolios to ₹5,00,000", res.modified_count)
+    logger.info("Starting-cash migration marker recorded without changing existing portfolios")
 
 
 async def seed_admin():
@@ -222,9 +228,8 @@ async def seed_admin():
             "isAdmin": True,
             "status": "approved",
         }
-        # If the environment password has changed (or was never recorded/seeded),
-        # update the admin's database password to match the new environment setting.
-        if stored_env_hash != env_hash:
+        sync_password = os.environ.get("ADMIN_SYNC_PASSWORD", "false").strip().lower() in {"1", "true", "yes", "on"}
+        if sync_password and stored_env_hash != env_hash:
             logger.info("Admin password in environment has changed or is new. Updating database password hash.")
             update_fields["passwordHash"] = hash_password(ADMIN_PASSWORD)
             update_fields["seededPasswordSha256"] = env_hash

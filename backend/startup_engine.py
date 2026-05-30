@@ -8,7 +8,8 @@ Simulates per-share prices for private/unlisted Indian startups based on:
 
 Effective price = base_price * (1 + demand_pressure[symbol]) * (1 + algo_drift[symbol])
 
-State is in-memory only (resets on server restart — by design, "fresh school day").
+Price drift/news/demand state is in-memory only; user portfolios and trade
+history live in MongoDB and must survive restarts.
 """
 from __future__ import annotations
 

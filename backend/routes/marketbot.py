@@ -1,34 +1,14 @@
-"""MarketBot chat + admin news refresh + reasons map."""
+"""MarketBot admin news refresh + reasons map."""
 from __future__ import annotations
 
-import logging
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from auth_utils import get_current_user, require_admin
 import marketbot
-from models import MarketBotChatReq
 from startup_engine import engine
 from state import STOCKS
 
-logger = logging.getLogger("routes.marketbot")
 router = APIRouter(prefix="/api/marketbot", tags=["marketbot"])
-
-
-@router.post("/chat")
-async def marketbot_chat(body: MarketBotChatReq, user=Depends(get_current_user)):
-    msg = (body.message or "").strip()
-    if not msg:
-        raise HTTPException(400, "Empty message")
-    if len(msg) > 1000:
-        raise HTTPException(400, "Message too long (max 1000 chars)")
-    sid = body.sessionId or f"chat-{user['userId']}"
-    try:
-        reply = await marketbot.chat_with_history(sid, body.history or [], msg)
-        return {"reply": reply, "sessionId": sid}
-    except Exception as e:
-        logger.warning("MarketBot chat failed: %s", e)
-        raise HTTPException(503, "MarketBot is taking a break. Try again shortly!")
 
 
 @router.post("/refresh-news")

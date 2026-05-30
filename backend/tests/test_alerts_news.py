@@ -250,14 +250,10 @@ class TestRegressions:
         assert body["symbol"] == sym
         assert "articles" in body
 
-    def test_marketbot_chat(self, admin_h):
+    def test_marketbot_chat_removed(self):
         r = requests.post(f"{BASE_URL}/api/marketbot/chat",
-                          json={"message": "What is Razorpay?"}, headers=admin_h, timeout=60)
-        # 200 happy path; 503 transient acceptable
-        assert r.status_code in (200, 503), r.text
-        if r.status_code == 200:
-            reply = r.json()["reply"]
-            assert "MarketBot estimate" in reply
+                          json={"message": "What is Razorpay?"}, timeout=20)
+        assert r.status_code == 404
 
     def test_leaderboard(self, admin_h):
         r = requests.get(f"{BASE_URL}/api/leaderboard", headers=admin_h, timeout=20)

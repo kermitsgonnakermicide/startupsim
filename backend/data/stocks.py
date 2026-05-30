@@ -21,7 +21,6 @@ STOCKS = [
     {"symbol": "SIGNZY", "name": "Signzy", "sector": "Fintech"},
     {"symbol": "YAP", "name": "Yap", "sector": "Fintech"},
     # EDTECH
-    {"symbol": "PWALLAH", "name": "Physics Wallah", "sector": "Edtech"},
     {"symbol": "MERITTO", "name": "Meritto", "sector": "Edtech"},
     {"symbol": "CLASSPLUS", "name": "Classplus", "sector": "Edtech"},
     {"symbol": "TEACHMINT", "name": "Teachmint", "sector": "Edtech"},
@@ -107,8 +106,8 @@ STOCKS = [
 ]
 
 # Valuation in ₹ crore — updated to realistic 2026 estimates based on
-# latest funding rounds, IPO pricing (PhysicsWallah, Nov 2025), markdowns
-# (BharatPe, ShareChat, MPL, Bounce), and growth (Innovaccer, Slice).
+# latest funding rounds, markdowns (BharatPe, ShareChat, MPL, Bounce),
+# and growth (Innovaccer, Slice).
 BASE_VALUATIONS = {
     # FINTECH
     "RZRPAY": 60000, "BHARATPE": 14000, "JUSPAY": 8500, "KREDITBEE": 6000,
@@ -116,7 +115,7 @@ BASE_VALUATIONS = {
     "FIMONEY": 3000, "FREO": 2200, "CASHFREE": 7500, "SETU": 1500,
     "PERFIOS": 8000, "SIGNZY": 1700, "YAP": 350,
     # EDTECH
-    "PWALLAH": 31000, "MERITTO": 1200, "CLASSPLUS": 4000, "TEACHMINT": 1800,
+    "MERITTO": 1200, "CLASSPLUS": 4000, "TEACHMINT": 1800,
     "SCALER": 6500, "LEVEDU": 1500, "PRACTICAL": 600, "SUNSTONE": 700, "INURTURE": 350,
     # HEALTHTECH
     "PRISTYN": 12000, "INNOVACR": 30000, "MFINE": 1200, "HLTHPLIX": 800,
