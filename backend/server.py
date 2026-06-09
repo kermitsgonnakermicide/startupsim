@@ -36,6 +36,7 @@ from state import (
 from routes.admin import router as admin_router
 from routes.alerts import router as alerts_router
 from routes.auth import router as auth_router
+from routes.backup import auto_backup_loop, router as backup_router
 from routes.chart import router as chart_router
 from routes.leaderboard import router as leaderboard_router
 from routes.market import router as market_router
@@ -73,7 +74,10 @@ async def lifespan(app: FastAPI):
     await alerts_service.load()
     engine.set_alert_check(alerts_service.check)
     engine.start()
+    # start periodic auto-backup (every 30 minutes)
+    backup_task = asyncio.create_task(auto_backup_loop())
     yield
+    backup_task.cancel()
     await fetcher.stop()
     await news_feeds.stop()
     await engine.stop()
@@ -84,8 +88,9 @@ app = FastAPI(lifespan=lifespan)
 
 # Mount all routers
 for _r in (
-    auth_router, market_router, trade_router, watchlist_router, alerts_router,
-    leaderboard_router, admin_router, chart_router, marketbot_router, news_router,
+    auth_router, backup_router, market_router, trade_router, watchlist_router,
+    alerts_router, leaderboard_router, admin_router, chart_router,
+    marketbot_router, news_router,
 ):
     app.include_router(_r)
 
