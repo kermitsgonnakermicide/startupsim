@@ -300,6 +300,10 @@ class NewsFeedAggregator:
             if art["published_at"] >= cutoff:
                 new_buf.append(art)
         self.articles = new_buf
+        # Rebuild _seen_links from retained articles to prevent unbounded memory growth.
+        # _seen_links is purely a dedup optimisation — losing old entries just means a
+        # link may be re-fetched once, which is harmless.
+        self._seen_links = {art["link"] for art in self.articles if art.get("link")}
         self._last_refresh = datetime.now(timezone.utc)
 
     # ------------- query API -------------

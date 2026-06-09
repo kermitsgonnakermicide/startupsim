@@ -69,40 +69,16 @@ MODEL_NAME = "gemini-1.5-flash"
 
 
 NEWS_SYSTEM = (
-    "You are MarketBot, a private-startup-valuation analyst for an educational "
-    "simulator. For each company, give a sentiment score reflecting recent "
-    "(last ~12 months) momentum from public knowledge — funding rounds, revenue "
-    "milestones, layoffs, regulatory issues, founder departures, fires, lawsuits, "
-    "data breaches, IPO filings, acquisitions, partnership announcements, etc. "
-    "Use the FULL range and be decisive: "
-    "score -5 for catastrophic events (fire/data-breach/fraud/enforcement), "
-    "score -3 to -4 for significant negatives (layoffs/markdown/scandal/lawsuit), "
-    "score -1 to -2 for mild headwinds, "
-    "0 only if genuinely no news, "
-    "+1 to +2 for small positives, "
-    "+3 to +4 for major wins (large funding round/profitable quarter/big partnership), "
-    "+5 for company-defining events (IPO/acquisition/billion-dollar-round). "
-    "Reply ONLY with valid JSON, no markdown, no prose. Format: "
-    '{"SYMBOL": {"score": int, "reason": "one short sentence describing the actual news driving the score"}}'
+    "You are MarketBot scoring Indian private startups on a -5 to +5 scale "
+    "(-5: catastrophic, +5: IPO/acquisition). Reply ONLY: "
+    '{"SYMBOL": {"score": int, "reason": "short sentence on the news driving score"}}'
 )
 
-
 LIVE_NEWS_SYSTEM = (
-    "You are MarketBot, a private-startup-valuation analyst for an educational "
-    "simulator. You are given REAL Indian-news headlines from verified national "
-    "publishers (Inc42, YourStory, Moneycontrol, LiveMint, Economic Times, "
-    "Hindu BusinessLine, Indian Express, CNBC-TV18). Score each company based "
-    "ONLY on the headlines provided (do not invent news). "
-    "Use the FULL range and be decisive: "
-    "score -5 for catastrophic events (fire/data-breach/fraud/enforcement action), "
-    "score -3 to -4 for significant negatives (layoffs/markdown/scandal/lawsuit), "
-    "score -1 to -2 for mild headwinds, "
-    "0 if the headlines are neutral, irrelevant, or no headlines were provided, "
-    "+1 to +2 for small positives, "
-    "+3 to +4 for major wins (funding round/profitable quarter/big partnership), "
-    "+5 for company-defining events (IPO/acquisition/billion-dollar round). "
-    "Reply ONLY with valid JSON, no markdown, no prose. Format: "
-    '{"SYMBOL": {"score": int, "reason": "one short sentence quoting or paraphrasing the actual headline"}}'
+    "You are MarketBot. Score each company -5 to +5 based ONLY on given headlines."
+    " -5: catastrophic, +5: IPO/acquisition. 0: neutral/no news. "
+    "Reply ONLY: "
+    '{"SYMBOL": {"score": int, "reason": "short sentence quoting the headline"}}'
 )
 
 
@@ -138,14 +114,13 @@ async def fetch_news_sentiment(items: list[dict]) -> dict[str, dict[str, Any]]:
     """
     if not items:
         return {}
+    key = _key()
+    if not key:
+        return _offline_sentiment(items)
     listing = "\n".join(f"- {it['symbol']}: {it['name']} ({it.get('sector','')})" for it in items)
-    user_text = (
-        "Score the following Indian private startups for current momentum:\n\n"
-        + listing
-        + "\n\nReturn ONLY a JSON object keyed by symbol."
-    )
+    user_text = "Score these:\n" + listing
     chat = (
-        LlmChat(api_key=_key(), session_id=f"news-{items[0]['symbol']}", system_message=NEWS_SYSTEM)
+        LlmChat(api_key=key, session_id=f"news-{items[0]['symbol']}", system_message=NEWS_SYSTEM)
         .with_model(MODEL_PROVIDER, MODEL_NAME)
     )
     try:
@@ -163,6 +138,9 @@ async def fetch_live_news_sentiment(
     """Score companies based on REAL headlines from live RSS feeds."""
     if not items:
         return {}
+    key = _key()
+    if not key:
+        return _offline_sentiment(items, article_lookup)
     sections = []
     covered = []
     for it in items:
@@ -172,29 +150,24 @@ async def fetch_live_news_sentiment(
             continue
         covered.append(it)
         bullets = []
-        for a in articles[:5]:
+        for a in articles[:3]:
             pub = a["published_at"]
             try:
                 pub_str = pub.strftime("%Y-%m-%d") if hasattr(pub, "strftime") else str(pub)[:10]
             except Exception:
                 pub_str = ""
-            line = f"  • [{a['source']} {pub_str}] {a['title']}"
+            line = f"• [{a['source']} {pub_str}] {a['title']}"
             if a.get("summary"):
-                line += f" — {a['summary'][:200]}"
+                line += f" — {a['summary'][:100]}"
             bullets.append(line)
-        sections.append(f"{sym} ({it['name']}, {it.get('sector','')}):\n" + "\n".join(bullets))
+        sections.append(f"{sym}:\n" + "\n".join(bullets))
 
     if not sections:
         return {}
 
-    user_text = (
-        "Recent verified headlines about these Indian private startups:\n\n"
-        + "\n\n".join(sections)
-        + "\n\nScore each company based ONLY on these headlines. "
-        "Return JSON keyed by symbol."
-    )
+    user_text = "Headlines:\n" + "\n\n".join(sections)
     chat = (
-        LlmChat(api_key=_key(), session_id=f"live-news-{covered[0]['symbol']}", system_message=LIVE_NEWS_SYSTEM)
+        LlmChat(api_key=key, session_id=f"live-news-{covered[0]['symbol']}", system_message=LIVE_NEWS_SYSTEM)
         .with_model(MODEL_PROVIDER, MODEL_NAME)
     )
     try:

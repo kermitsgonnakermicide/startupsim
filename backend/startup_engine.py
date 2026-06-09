@@ -47,9 +47,9 @@ def _ist_now_str() -> str:
 
 
 NEWS_CYCLE_INTERVAL = 600   # seconds between news refreshes (10 min)
-NEWS_BATCH_SIZE = 5         # symbols per batch — full universe covered every ~3 hours
-FULL_SWEEP_INTERVAL = 1800  # seconds between full-universe sweeps (30 min)
-FULL_SWEEP_CHUNK = 10       # symbols per Claude call during a full sweep
+NEWS_BATCH_SIZE = 10         # symbols per batch — full universe covered every ~90 min
+FULL_SWEEP_INTERVAL = 7200  # seconds between full-universe sweeps (2 hrs)
+FULL_SWEEP_CHUNK = 10       # symbols per Gemini call during a full sweep
 
 
 class StartupEngine:
